@@ -29,6 +29,24 @@ func logWaterIntake(amount int, filename string) error {
 	return nil
 }
 
+func setDailyGoal(goal int, filename string) error {
+	setGoal := fmt.Sprintf("%d", goal)
+
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return fmt.Errorf("could not open file: %v", err)
+	}
+
+	defer file.Close()
+
+	_, err = file.WriteString(setGoal)
+	if err != nil {
+		return fmt.Errorf("could not write to file: %v", err)
+	}
+
+	return nil
+}
+
 func calculateTotalWater(filename string) (int, error) {
 	// Get logged water intakes from file
 	file, err := os.Open(filename)
@@ -71,33 +89,89 @@ func calculateTotalWater(filename string) (int, error) {
 }
 
 func main() {
-	filename := "water_log.csv"
+	logFilename := "water_log.csv"
+	// goalFilename := "goal.txt"
+
 	var amount int
+	// var goal int
 
-	fmt.Print("Enter the amount of water consumed (in ml): ")
-	_, err := fmt.Scan(&amount)
-	if err != nil || amount <= 0 {
-		fmt.Println("Invalid input. Please enter a positive number")
-		return
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Println("\nWater Intake Tracker")
+		fmt.Println("\n1. Log Water Intake")
+		fmt.Println("2. View Progress")
+		fmt.Println("3. Set Goal")
+		fmt.Println("4. Exit")
+		fmt.Print("\nChoose an option: ")
+
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+
+		switch choice {
+		case "1":
+			fmt.Println("Logging water intake...")
+			fmt.Print("\nEnter the amount of water consumed (in ml): ")
+			_, err := fmt.Scan(&amount)
+			if err != nil || amount <= 0 {
+				fmt.Println("Invalid input. Please enter a positive number")
+				return
+			}
+
+			err = logWaterIntake(amount, logFilename)
+			if err != nil {
+				fmt.Printf("Error logging water intake: %v\n", err)
+				return
+			}
+
+			fmt.Printf("Logged %d ml of water successfully!\n", amount)
+
+			totalWater, err := calculateTotalWater(logFilename)
+			if err != nil {
+				fmt.Printf("Error calculating total water intake: %v\n", err)
+				return
+			}
+
+			if totalWater >= 1000 {
+				fmt.Printf("\nYou've consumed %.2f litres today\n", float64(totalWater)/1000)
+			} else {
+				fmt.Printf("\nYou've consumed %d ml today\n", totalWater)
+			}
+		case "2":
+			fmt.Println("Viewing progress...")
+		case "3":
+			fmt.Println("Setting a new goal...")
+		case "4":
+			fmt.Println("Exiting. Stay hydrated!")
+			return
+		default:
+			fmt.Println("Invalid choice, input the number for the option require. Please try again.")
+		}
 	}
 
-	err = logWaterIntake(amount, filename)
-	if err != nil {
-		fmt.Printf("Error logging water intake: %v\n", err)
-		return
-	}
+	// fmt.Print("Enter the amount of water consumed (in ml): ")
+	// _, err := fmt.Scan(&amount)
+	// if err != nil || amount <= 0 {
+	// 	fmt.Println("Invalid input. Please enter a positive number")
+	// 	return
+	// }
 
-	fmt.Printf("Logged %d ml of water successfully!\n", amount)
+	// err = logWaterIntake(amount, logFilename)
+	// if err != nil {
+	// 	fmt.Printf("Error logging water intake: %v\n", err)
+	// 	return
+	// }
 
-	totalWater, err := calculateTotalWater(filename)
-	if err != nil {
-		fmt.Printf("Error calculating total water intake: %v\n", err)
-		return
-	}
+	// fmt.Printf("Logged %d ml of water successfully!\n", amount)
 
-	if totalWater >= 1000 {
-		fmt.Printf("You've consumed %.2f litres today", float64(totalWater)/1000)
-	} else {
-		fmt.Printf("You've consumed %d ml today", totalWater)
-	}
+	// totalWater, err := calculateTotalWater(logFilename)
+	// if err != nil {
+	// 	fmt.Printf("Error calculating total water intake: %v\n", err)
+	// 	return
+	// }
+
+	// if totalWater >= 1000 {
+	// 	fmt.Printf("You've consumed %.2f litres today", float64(totalWater)/1000)
+	// } else {
+	// 	fmt.Printf("You've consumed %d ml today", totalWater)
+	// }
 }
