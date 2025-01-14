@@ -40,6 +40,11 @@ func logWaterIntake() {
 var dailyGoal int = 2000 // Default goal
 
 func viewDailyProgress() {
+	if len(waterLogs) == 0 {
+		fmt.Println("No water intake logs available today.")
+		return
+	}
+
 	today := time.Now().Format("2006-01-02")
 	total := 0
 
