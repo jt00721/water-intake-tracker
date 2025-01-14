@@ -36,6 +36,26 @@ func logWaterIntake() {
 	fmt.Printf("Logged %d ml at %s\n", amount, entry.Timestamp.Format("2006-01-02 15:04:05"))
 }
 
+var dailyGoal int = 2000 // Default goal
+
+func viewDailyProgress() {
+	today := time.Now().Format("2006-01-02")
+	total := 0
+
+	for _, entry := range waterLogs {
+		if entry.Timestamp.Format("2006-01-02") == today {
+			total += entry.Amount
+		}
+	}
+
+	fmt.Printf("\nDaily Progress: %d/%d ml\n", total, dailyGoal)
+	if total >= dailyGoal {
+		fmt.Println("Congratulations! You've met your daily goal!")
+	} else {
+		fmt.Printf("You need %d more ml to reach your goal.\n", dailyGoal-total)
+	}
+}
+
 // func setDailyGoal(goal int, filename string) error {
 // 	return nil
 // }
@@ -98,7 +118,7 @@ func main() {
 		case "1":
 			logWaterIntake()
 		case "2":
-			fmt.Println("Viewing progress...")
+			viewDailyProgress()
 		case "3":
 			fmt.Println("Setting a new goal...")
 		case "4":
