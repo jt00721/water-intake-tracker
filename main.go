@@ -56,6 +56,22 @@ func viewDailyProgress() {
 	}
 }
 
+func setDailyGoal() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter your new daily goal (in ml): ")
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+
+	goal, err := strconv.Atoi(input)
+	if err != nil || goal <= 0 {
+		fmt.Println("Invalid input. Please enter a positive number.")
+		return
+	}
+
+	dailyGoal = goal
+	fmt.Printf("Your new daily goal is set to %d ml.\n", dailyGoal)
+}
+
 // func setDailyGoal(goal int, filename string) error {
 // 	return nil
 // }
@@ -120,7 +136,7 @@ func main() {
 		case "2":
 			viewDailyProgress()
 		case "3":
-			fmt.Println("Setting a new goal...")
+			setDailyGoal()
 		case "4":
 			fmt.Println("Exiting. Stay hydrated!")
 			return
