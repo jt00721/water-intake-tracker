@@ -9,92 +9,79 @@ import (
 	"time"
 )
 
-func logWaterIntake(amount int, filename string) error {
-	timestamp := time.Now().Format(time.RFC3339)
-
-	logEntry := fmt.Sprintf("%s,%d\n", timestamp, amount)
-
-	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("could not open file: %v", err)
-	}
-
-	defer file.Close()
-
-	_, err = file.WriteString(logEntry)
-	if err != nil {
-		return fmt.Errorf("could not write to file: %v", err)
-	}
-
-	return nil
+type WaterEntry struct {
+	Amount    int
+	Timestamp time.Time
 }
 
-func setDailyGoal(goal int, filename string) error {
-	setGoal := fmt.Sprintf("%d", goal)
+var waterLogs []WaterEntry
 
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0644)
-	if err != nil {
-		return fmt.Errorf("could not open file: %v", err)
+func logWaterIntake() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter the amount of water (in ml): ")
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+
+	amount, err := strconv.Atoi(input)
+	if err != nil || amount <= 0 {
+		fmt.Println("Invalid input. Please enter a positive number.")
+		return
 	}
 
-	defer file.Close()
-
-	_, err = file.WriteString(setGoal)
-	if err != nil {
-		return fmt.Errorf("could not write to file: %v", err)
+	entry := WaterEntry{
+		Amount:    amount,
+		Timestamp: time.Now(),
 	}
-
-	return nil
+	waterLogs = append(waterLogs, entry)
+	fmt.Printf("Logged %d ml at %s\n", amount, entry.Timestamp.Format("2006-01-02 15:04:05"))
 }
 
-func calculateTotalWater(filename string) (int, error) {
-	// Get logged water intakes from file
-	file, err := os.Open(filename)
-	if err != nil {
-		return 0, fmt.Errorf("could not open file: %v", err)
-	}
+// func setDailyGoal(goal int, filename string) error {
+// 	return nil
+// }
 
-	defer file.Close()
+// func calculateTotalWater(filename string) (int, error) {
+// 	// Get logged water intakes from file
+// 	file, err := os.Open(filename)
+// 	if err != nil {
+// 		return 0, fmt.Errorf("could not open file: %v", err)
+// 	}
 
-	currentDate := time.Now().Format("2006-01-02")
+// 	defer file.Close()
 
-	totalWater := 0
+// 	currentDate := time.Now().Format("2006-01-02")
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
+// 	totalWater := 0
 
-		parts := strings.Split(line, ",")
-		if len(parts) != 2 {
-			continue
-		}
+// 	scanner := bufio.NewScanner(file)
+// 	for scanner.Scan() {
+// 		line := scanner.Text()
 
-		timestamp := parts[0]
-		amount, err := strconv.Atoi(parts[1])
-		if err != nil {
-			continue
-		}
+// 		parts := strings.Split(line, ",")
+// 		if len(parts) != 2 {
+// 			continue
+// 		}
 
-		formattedTimeStamp := timestamp[:10]
-		if formattedTimeStamp == currentDate {
-			totalWater += amount
-		}
-	}
+// 		timestamp := parts[0]
+// 		amount, err := strconv.Atoi(parts[1])
+// 		if err != nil {
+// 			continue
+// 		}
 
-	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("error reading file: %v", err)
-	}
+// 		formattedTimeStamp := timestamp[:10]
+// 		if formattedTimeStamp == currentDate {
+// 			totalWater += amount
+// 		}
+// 	}
 
-	return totalWater, nil
-}
+// 	if err := scanner.Err(); err != nil {
+// 		return 0, fmt.Errorf("error reading file: %v", err)
+// 	}
+
+// 	return totalWater, nil
+// }
 
 func main() {
-	logFilename := "water_log.csv"
-	// goalFilename := "goal.txt"
-
-	var amount int
-	// var goal int
-
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Println("\nWater Intake Tracker")
@@ -109,33 +96,7 @@ func main() {
 
 		switch choice {
 		case "1":
-			fmt.Println("Logging water intake...")
-			fmt.Print("\nEnter the amount of water consumed (in ml): ")
-			_, err := fmt.Scan(&amount)
-			if err != nil || amount <= 0 {
-				fmt.Println("Invalid input. Please enter a positive number")
-				return
-			}
-
-			err = logWaterIntake(amount, logFilename)
-			if err != nil {
-				fmt.Printf("Error logging water intake: %v\n", err)
-				return
-			}
-
-			fmt.Printf("Logged %d ml of water successfully!\n", amount)
-
-			totalWater, err := calculateTotalWater(logFilename)
-			if err != nil {
-				fmt.Printf("Error calculating total water intake: %v\n", err)
-				return
-			}
-
-			if totalWater >= 1000 {
-				fmt.Printf("\nYou've consumed %.2f litres today\n", float64(totalWater)/1000)
-			} else {
-				fmt.Printf("\nYou've consumed %d ml today\n", totalWater)
-			}
+			logWaterIntake()
 		case "2":
 			fmt.Println("Viewing progress...")
 		case "3":
