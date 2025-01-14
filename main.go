@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -11,13 +12,16 @@ import (
 )
 
 type WaterEntry struct {
-	Amount    int
-	Timestamp time.Time
+	Amount    int       `json:"amount"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
-var waterLogs []WaterEntry
+type TrackerData struct {
+	Goal int          `json:"goal"`
+	Logs []WaterEntry `json:"logs"`
+}
 
-func logWaterIntake() {
+func logWaterIntake(data *TrackerData) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter the amount of water (in ml): ")
 	input, _ := reader.ReadString('\n')
@@ -33,14 +37,13 @@ func logWaterIntake() {
 		Amount:    amount,
 		Timestamp: time.Now(),
 	}
-	waterLogs = append(waterLogs, entry)
+
+	data.Logs = append(data.Logs, entry)
 	fmt.Printf("Logged %d ml at %s\n", amount, entry.Timestamp.Format("2006-01-02 15:04:05"))
 }
 
-var dailyGoal int = 2000 // Default goal
-
-func viewDailyProgress() {
-	if len(waterLogs) == 0 {
+func viewDailyProgress(data TrackerData) {
+	if len(data.Logs) == 0 {
 		fmt.Println("No water intake logs available today.")
 		return
 	}
@@ -48,21 +51,21 @@ func viewDailyProgress() {
 	today := time.Now().Format("2006-01-02")
 	total := 0
 
-	for _, entry := range waterLogs {
+	for _, entry := range data.Logs {
 		if entry.Timestamp.Format("2006-01-02") == today {
 			total += entry.Amount
 		}
 	}
 
-	fmt.Printf("\nDaily Progress: %d/%d ml\n", total, dailyGoal)
-	if total >= dailyGoal {
+	fmt.Printf("\nDaily Progress: %d/%d ml\n", total, data.Goal)
+	if total >= data.Goal {
 		fmt.Println("Congratulations! You've met your daily goal!")
 	} else {
-		fmt.Printf("You need %d more ml to reach your goal.\n", dailyGoal-total)
+		fmt.Printf("You need %d more ml to reach your goal.\n", data.Goal-total)
 	}
 }
 
-func setDailyGoal() {
+func setDailyGoal(data *TrackerData) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter your new daily goal (in ml): ")
 	input, _ := reader.ReadString('\n')
@@ -74,8 +77,48 @@ func setDailyGoal() {
 		return
 	}
 
-	dailyGoal = goal
-	fmt.Printf("Your new daily goal is set to %d ml.\n", dailyGoal)
+	data.Goal = goal
+	fmt.Printf("Your new daily goal is set to %d ml.\n", data.Goal)
+}
+
+func saveData(data TrackerData, filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %v", err)
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	err = encoder.Encode(data)
+	if err != nil {
+		return fmt.Errorf("failed to encode data: %v", err)
+	}
+
+	fmt.Println("Data saved successfully.")
+	return nil
+}
+
+func loadData(filename string) (TrackerData, error) {
+	var data TrackerData
+
+	file, err := os.Open(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println("No existing data file found. Starting with default settings.")
+			return TrackerData{Goal: 2000}, nil
+		}
+		return data, fmt.Errorf("failed to open file: %v", err)
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&data)
+	if err != nil {
+		return data, fmt.Errorf("failed to decode data: %v", err)
+	}
+
+	fmt.Println("Data loaded successfully.")
+	return data, nil
 }
 
 func parseInput(input string) (int, error) {
@@ -109,6 +152,14 @@ func showHelp() {
 }
 
 func main() {
+	const filename = "tracker.json"
+
+	data, err := loadData(filename)
+	if err != nil {
+		fmt.Printf("Error loading data: %v\n", err)
+		return
+	}
+
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		displayMenu()
@@ -117,14 +168,18 @@ func main() {
 
 		switch choice {
 		case "1":
-			logWaterIntake()
+			logWaterIntake(&data)
 		case "2":
-			viewDailyProgress()
+			viewDailyProgress(data)
 		case "3":
-			setDailyGoal()
+			setDailyGoal(&data)
 		case "4":
 			showHelp()
 		case "5":
+			err := saveData(data, filename)
+			if err != nil {
+				fmt.Printf("Error saving data: %v\n", err)
+			}
 			fmt.Println("Exiting... Stay hydrated!")
 			return
 		default:
